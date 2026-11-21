@@ -1,5 +1,7 @@
 # AULA F87 RGB Controller (`f87_master`)
 
+[🇻🇳 Tiếng Việt](README_VI.md) | [🇬🇧 English](README.md)
+
 Open-source, high-performance per-key RGB lighting software and animation suite for the **AULA F87 / F87 Pro** mechanical keyboard (Wired USB `258a:010c` and 2.4GHz Wireless Dongle `3554:fa09`), built natively in Rust.
 
 ---
@@ -18,6 +20,8 @@ Open-source, high-performance per-key RGB lighting software and animation suite 
   - `Aurora`: Borealis ribbons with shimmering emerald and violet gradients.
   - `Wave`, `Breathe`, `Ripple`, `Spiral`, `Bloom`, `Sweep`, `Solid`, `Text`.
 - **Per-Setting "Set Default" Controls**: Dedicated reset buttons for each slider, color picker, and tempo parameter.
+- **Background Tray Persistence**: Closing the window (`[X]`) automatically minimizes the app to the system tray so lighting never stops.
+- **Hardware Memory Retention**: When quitting the app, the active frame is automatically written to the keyboard's static onboard memory (`kb.set_static`), keeping keys illuminated instead of turning dark.
 - **Streamlined UI**: Clean, responsive layout without unnecessary sidebars; live keyboard visualizer; top quick-device switcher; tray minimization.
 - **Keyframe & Composition Editor**: Timeline keyframe painter, layered masks, and GIF/image import.
 - **Stand-alone Installer**: Native Windows installer with desktop and Start Menu shortcuts, folder selection, and clean uninstaller.
