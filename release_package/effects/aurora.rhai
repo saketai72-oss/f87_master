@@ -25,11 +25,17 @@ fn render(t, keys, p) {
         // Hue shifts between green/cyan (0.42) and purple/magenta (0.75)
         let hue = frac(0.42 + wave * 0.20);
 
-        // Intensity fades out towards bottom/top edges smoothly
-        let v = (0.5 + 0.5 * wave) * p.brightness;
-        v = v * (0.3 + 0.7 * clamp(1.0 - abs(k.ny - 0.4) * 1.4, 0.0, 1.0));
+        // High contrast arctic curtains on a dark sky for 2.4G wireless smoothness
+        let v = 0.5 + 0.5 * wave;
+        let edge = clamp(1.0 - abs(k.ny - 0.4) * 1.5, 0.0, 1.0);
+        let raw_val = v * edge;
+        let brightness = 0.0;
+        if raw_val > 0.40 {
+            let f = (raw_val - 0.40) / 0.60;
+            brightness = f * f * p.brightness;
+        }
 
-        out.push(hsv(hue, 0.95, v));
+        out.push(hsv(hue, 0.95, brightness));
     }
     out
 }

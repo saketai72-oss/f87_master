@@ -20,7 +20,16 @@ fn render(t, keys, p) {
         let d = dist(k.nx, k.ny, 0.5, 0.5);
         let phase = (d / p.width - t * p.speed) * pi2;
         let v = 0.5 + 0.5 * sin(phase);
-        let brightness = v * v;
+        let brightness = 0.0;
+        if v > 0.40 {
+            let f = (v - 0.40) / 0.60;
+            brightness = f * f;
+        }
+
+        if brightness <= 0.0 {
+            out.push([0.0, 0.0, 0.0]);
+            continue;
+        }
 
         // Dual color mix: alternate between cyan and pink along distance
         let angle = (d * 8.0 - t * p.speed * 0.5) * pi2;

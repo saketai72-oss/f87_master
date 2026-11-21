@@ -10,7 +10,7 @@ fn meta() {
         params: [
             #{ id: "speed", label: "Speed",      kind: "float", min: 0.0, max: 3.0, "default": 0.6 },
             #{ id: "arms",  label: "Arms",       kind: "int",   min: 1,   max: 6,   "default": 2 },
-            #{ id: "trail", label: "Trail",      kind: "float", min: 0.05, max: 1.0, "default": 0.35 },
+            #{ id: "trail", label: "Trail",      kind: "float", min: 0.05, max: 1.0, "default": 0.20 },
             #{ id: "bright", label: "Brightness", kind: "float", min: 0.0, max: 1.0, "default": 1.0 },
         ],
     }

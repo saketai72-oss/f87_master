@@ -32,7 +32,12 @@ fn render(t, keys, p) {
         // Deep red (hue 0.0) -> orange -> bright yellow (hue ~0.14)
         let hue = clamp(temp * 0.14, 0.0, 0.16);
         let sat = clamp(1.0 - (temp - 0.75) * 3.0, 0.25, 1.0);
-        let val = clamp(temp * 1.4, 0.0, 1.0);
+        // Clean hearth cutoff: cool air above flames stays black for 2.4G 21 FPS throughput
+        let val = 0.0;
+        if temp > 0.30 {
+            let f = (temp - 0.30) / 0.70;
+            val = f * f;
+        }
 
         out.push(hsv(hue, sat, val));
     }

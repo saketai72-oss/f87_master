@@ -21,7 +21,7 @@ impl Effect for Sweep {
                 ParamSpec::float("seconds", "Seconds per pass", 0.3, 6.0, 1.6),
                 ParamSpec::float("width", "Bar width", 0.04, 0.5, 0.16),
                 ParamSpec::color("color", "Colour", Rgb::new(255, 255, 230)),
-                ParamSpec::color("background", "Background", Rgb::new(0, 0, 40)),
+                ParamSpec::color("background", "Background", Rgb::BLACK),
                 ParamSpec::float("brightness", "Brightness", 0.0, 1.0, 1.0),
             ],
         }
@@ -31,7 +31,7 @@ impl Effect for Sweep {
         let seconds = ctx.params.float("seconds", 1.6).max(0.05);
         let width = ctx.params.float("width", 0.16).max(0.01);
         let color = ctx.params.color("color", Rgb::new(255, 255, 230));
-        let background = ctx.params.color("background", Rgb::new(0, 0, 40));
+        let background = ctx.params.color("background", Rgb::BLACK);
         let brightness = ctx.params.float("brightness", 1.0);
 
         // Start and finish fully off the board, so the bar enters and leaves
