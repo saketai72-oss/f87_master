@@ -1,0 +1,16 @@
+[package]
+name = "aula-f87-installer"
+version = "0.5.2"
+edition = "2021"
+
+[workspace]
+
+[[bin]]
+name = "AULA-F87-Setup-x64"
+path = "src/main.rs"
+
+[profile.release]
+opt-level = "z"
+lto = true
+strip = true
+panic = "abort"

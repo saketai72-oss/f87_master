@@ -1,0 +1,43 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/aula-protocol",
+    "crates/aula-effects",
+    "crates/aula-app",
+]
+
+[workspace.package]
+version = "0.5.2"
+edition = "2021"
+rust-version = "1.75"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/saketai72-oss/f87_master"
+authors = ["saketai72-oss"]
+
+[workspace.dependencies]
+aula-protocol = { path = "crates/aula-protocol" }
+aula-effects = { path = "crates/aula-effects" }
+
+anyhow = "1"
+thiserror = "2"
+hidapi = "2"
+rhai = { version = "1", features = ["sync"] }
+notify = "7"
+# default-features = false drops the "links" feature, which pulls in
+# webbrowser -> url -> idna -> icu -> displaydoc. We never open hyperlinks, and
+# that chain fails to build on some toolchains.
+eframe = { version = "0.29", default-features = false, features = ["glow", "default_fonts", "wayland", "x11", "accesskit"] }
+egui = "0.29"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+image = { version = "0.25", default-features = false, features = ["gif", "png", "jpeg", "bmp", "webp", "tga"] }
+rfd = "0.15"
+tray-icon = "0.19"
+raw-window-handle = "0.6"
+windows-sys = { version = "0.59", features = ["Win32_Foundation", "Win32_UI_WindowsAndMessaging"] }
+strum = { version = "0.28", features = ["derive"] }
+
+[profile.release]
+opt-level = 3
+lto = true
+strip = true

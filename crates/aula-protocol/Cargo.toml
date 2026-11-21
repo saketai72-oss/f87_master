@@ -1,0 +1,20 @@
+[package]
+name = "aula-protocol"
+description = "Native AULA keyboard HID protocol and cross-brand OpenRGB SDK client"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+
+[dependencies]
+hidapi.workspace = true
+thiserror.workspace = true
+
+[dev-dependencies]
+anyhow.workspace = true
+
+[[example]]
+name = "smoke"
+path = "examples/smoke.rs"

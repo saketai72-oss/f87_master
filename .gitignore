@@ -1,0 +1,24 @@
+# Rust build artifacts
+target/
+packaging/windows/installer/target/
+**/*.rs.bk
+*.pdb
+
+# USB captures: large and machine-specific
+*.pcapng
+*.pcap
+
+# Device dumps, except the captured config blocks
+*.bin
+!reference/captured-config.bin
+!reference/custom-mode-config.bin
+
+# User runtime generated content
+/animations/*.json
+/animations/*.klx
+!animations/f87_*.klx
+!animations/example*.json
+
+# OS files
+.DS_Store
+Thumbs.db

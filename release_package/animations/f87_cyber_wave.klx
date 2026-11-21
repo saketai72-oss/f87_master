@@ -1,0 +1,41 @@
+{
+  "name": "F87 Cyber Wave",
+  "description": "Synthwave gradient scroll with radiant pulse overlay",
+  "leds": 126,
+  "duration": 3.0,
+  "loops": true,
+  "layers": [
+    {
+      "name": "Neon Base",
+      "content": {
+        "type": "generator",
+        "kind": "gradient-scroll",
+        "color_a": "#7c4dff",
+        "color_b": "#00e5ff",
+        "direction": "left-to-right",
+        "width": 0.35,
+        "cycles": 1.0,
+        "frames": 30
+      },
+      "blend": "normal",
+      "opacity": 0.9,
+      "enabled": true
+    },
+    {
+      "name": "Cyan Ripple",
+      "content": {
+        "type": "generator",
+        "kind": "ripple",
+        "color_a": "#ff007f",
+        "color_b": "#000000",
+        "direction": "left-to-right",
+        "width": 0.25,
+        "cycles": 2.0,
+        "frames": 30
+      },
+      "blend": "add",
+      "opacity": 0.7,
+      "enabled": true
+    }
+  ]
+}

@@ -1,0 +1,25 @@
+{
+  "name": "F87 Rainbow Sweep",
+  "description": "Smooth travelling full-spectrum rainbow sweep",
+  "leds": 126,
+  "duration": 4.0,
+  "loops": true,
+  "layers": [
+    {
+      "name": "Spectrum Flow",
+      "content": {
+        "type": "generator",
+        "kind": "rainbow",
+        "color_a": "#000000",
+        "color_b": "#000000",
+        "direction": "left-to-right",
+        "width": 0.3,
+        "cycles": 1.0,
+        "frames": 40
+      },
+      "blend": "normal",
+      "opacity": 1.0,
+      "enabled": true
+    }
+  ]
+}

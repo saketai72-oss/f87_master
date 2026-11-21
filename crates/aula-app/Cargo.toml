@@ -1,0 +1,37 @@
+[package]
+name = "aula-app"
+description = "Desktop keyboard RGB control with native AULA and OpenRGB backends"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+
+[[bin]]
+name = "f87"
+path = "src/main.rs"
+
+[dependencies]
+aula-protocol.workspace = true
+aula-effects.workspace = true
+anyhow.workspace = true
+eframe.workspace = true
+egui.workspace = true
+rfd.workspace = true
+tray-icon.workspace = true
+raw-window-handle.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+strum.workspace = true
+
+[build-dependencies]
+image = { version = "0.25", default-features = false, features = ["ico"] }
+winresource = "0.1"
+
+[target.'cfg(windows)'.dependencies]
+windows-sys = { workspace = true, features = ["Win32_Graphics_Dwm", "Win32_System_Threading", "Win32_System_Registry", "Win32_Security"] }
+
+[target.'cfg(target_os = "linux")'.dependencies]
+gtk = "0.18.2"
+x11rb = "0.13"
