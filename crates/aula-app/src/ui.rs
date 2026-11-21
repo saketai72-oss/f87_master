@@ -63,6 +63,9 @@ pub struct App {
     quitting: bool,
     /// Whether lighting was running when we hid, so restoring puts it back.
     resume_on_show: bool,
+    capture_dir: Option<std::path::PathBuf>,
+    capture_step: usize,
+    capture_pending_name: Option<String>,
 }
 
 impl App {
@@ -161,6 +164,9 @@ impl App {
             hidden: false,
             quitting: false,
             resume_on_show: false,
+            capture_dir: std::env::var_os("F87_CAPTURE_DIR").map(std::path::PathBuf::from),
+            capture_step: 0,
+            capture_pending_name: None,
         }
     }
 
@@ -1004,8 +1010,113 @@ fn open_folder(path: &std::path::Path) {
     let _ = std::process::Command::new("xdg-open").arg(path).spawn();
 }
 
+impl App {
+    fn handle_capture(&mut self, ctx: &egui::Context) {
+        let Some(dir) = self.capture_dir.clone() else { return; };
+
+        let mut got_screenshot = false;
+        for event in &ctx.input(|i| i.raw.events.clone()) {
+            if let egui::Event::Screenshot { image, .. } = event {
+                if let Some(name) = self.capture_pending_name.take() {
+                    let path = dir.join(name);
+                    let _ = image::save_buffer(
+                        &path,
+                        image.as_raw(),
+                        image.size[0] as u32,
+                        image.size[1] as u32,
+                        image::ColorType::Rgba8,
+                    );
+                    got_screenshot = true;
+                }
+            }
+        }
+
+        match self.capture_step {
+            0 => {
+                self.tab = Tab::Play;
+                self.capture_step = 1;
+                ctx.request_repaint();
+            }
+            1 => {
+                self.capture_pending_name = Some("frame_1_play.png".to_string());
+                ctx.send_viewport_cmd(egui::ViewportCommand::Screenshot);
+                self.capture_step = 2;
+                ctx.request_repaint();
+            }
+            2 => {
+                if got_screenshot {
+                    self.tab = Tab::Create;
+                    self.capture_step = 3;
+                    ctx.request_repaint();
+                }
+            }
+            3 => {
+                self.capture_pending_name = Some("frame_2_studio.png".to_string());
+                ctx.send_viewport_cmd(egui::ViewportCommand::Screenshot);
+                self.capture_step = 4;
+                ctx.request_repaint();
+            }
+            4 => {
+                if got_screenshot {
+                    self.tab = Tab::Apps;
+                    self.capture_step = 5;
+                    ctx.request_repaint();
+                }
+            }
+            5 => {
+                self.capture_pending_name = Some("frame_3_profiles.png".to_string());
+                ctx.send_viewport_cmd(egui::ViewportCommand::Screenshot);
+                self.capture_step = 6;
+                ctx.request_repaint();
+            }
+            6 => {
+                if got_screenshot {
+                    self.tab = Tab::Settings;
+                    self.capture_step = 7;
+                    ctx.request_repaint();
+                }
+            }
+            7 => {
+                self.capture_pending_name = Some("frame_4_settings.png".to_string());
+                ctx.send_viewport_cmd(egui::ViewportCommand::Screenshot);
+                self.capture_step = 8;
+                ctx.request_repaint();
+            }
+            8 => {
+                if got_screenshot {
+                    self.tab = Tab::Play;
+                    ctx.send_viewport_cmd(egui::ViewportCommand::Fullscreen(true));
+                    self.capture_step = 9;
+                    ctx.request_repaint();
+                }
+            }
+            9 => {
+                self.capture_step = 10;
+                ctx.request_repaint();
+            }
+            10 => {
+                self.capture_pending_name = Some("frame_5_fullscreen.png".to_string());
+                ctx.send_viewport_cmd(egui::ViewportCommand::Screenshot);
+                self.capture_step = 11;
+                ctx.request_repaint();
+            }
+            11 => {
+                if got_screenshot {
+                    ctx.send_viewport_cmd(egui::ViewportCommand::Fullscreen(false));
+                    let _ = std::fs::write(dir.join("done.txt"), "ok");
+                    self.quitting = true;
+                    ctx.send_viewport_cmd(egui::ViewportCommand::Close);
+                    self.capture_step = 12;
+                }
+            }
+            _ => {}
+        }
+    }
+}
+
 impl eframe::App for App {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+        self.handle_capture(ctx);
         // Snapshot the engine state, then release the lock before drawing.
         let (
             frame,
@@ -1142,15 +1253,15 @@ impl eframe::App for App {
                         },
                     );
 
-                    // Hardware status badge: ('AULA F87 Wired' / 'AULA F87 Wireless 2.4G')
+                    // Hardware status badge: ('Wired' / 'Wireless 2.4G' / 'Disconnected')
                     let (badge_text, badge_color) = match &status {
                         DeviceStatus::Connected { .. } => match link {
-                            Some(Link::Dongle) => ("AULA F87 Wireless 2.4G", pal.accent),
-                            Some(Link::Wired) => ("AULA F87 Wired", pal.success),
-                            _ => ("AULA F87 Connected", pal.success),
+                            Some(Link::Dongle) => ("Wireless 2.4G", pal.accent),
+                            Some(Link::Wired) => ("Wired", pal.success),
+                            _ => ("Connected", pal.success),
                         },
-                        DeviceStatus::Waiting { .. } => ("AULA F87 Connecting...", pal.warning),
-                        DeviceStatus::Disconnected(_) => ("AULA F87 Disconnected", pal.danger),
+                        DeviceStatus::Waiting { .. } => ("Connecting...", pal.warning),
+                        DeviceStatus::Disconnected(_) => ("Disconnected", pal.danger),
                     };
 
                     ui.add_space(8.0);
@@ -1253,8 +1364,8 @@ impl eframe::App for App {
                     ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                         // Window controls: Close, Maximize/Restore, Minimize
                         let close_btn = egui::Button::new(
-                            egui::RichText::new(" ✕ ")
-                                .size(13.0)
+                            egui::RichText::new(" × ")
+                                .size(16.0)
                                 .strong()
                                 .color(pal.danger),
                         )
@@ -1267,7 +1378,7 @@ impl eframe::App for App {
 
                         let is_fullscreen = ctx.input(|i| i.viewport().fullscreen.unwrap_or(false));
                         let is_maximized = ctx.input(|i| i.viewport().maximized.unwrap_or(false));
-                        let max_icon = if is_fullscreen || is_maximized { " 🗗 " } else { " 🗖 " };
+                        let max_icon = if is_fullscreen || is_maximized { " ▣ " } else { " □ " };
                         let max_tip = if is_fullscreen {
                             "Thoát toàn màn hình (Exit Fullscreen · F11 / Esc)"
                         } else if is_maximized {
@@ -1277,7 +1388,7 @@ impl eframe::App for App {
                         };
                         let max_btn = egui::Button::new(
                             egui::RichText::new(max_icon)
-                                .size(12.0)
+                                .size(13.0)
                                 .color(pal.text_muted),
                         )
                         .fill(egui::Color32::TRANSPARENT)
@@ -1292,8 +1403,9 @@ impl eframe::App for App {
                         }
 
                         let min_btn = egui::Button::new(
-                            egui::RichText::new(" 🗕 ")
-                                .size(12.0)
+                            egui::RichText::new(" - ")
+                                .size(16.0)
+                                .strong()
                                 .color(pal.text_muted),
                         )
                         .fill(egui::Color32::TRANSPARENT)

@@ -14,8 +14,10 @@ fn main() {
         .expect("valid app icon dimensions")
         .save_with_format(&path, image::ImageFormat::Ico)
         .expect("write Windows icon");
-    winresource::WindowsResource::new()
+    if let Err(err) = winresource::WindowsResource::new()
         .set_icon(path.to_str().expect("UTF-8 icon path"))
         .compile()
-        .expect("embed Windows executable icon");
+    {
+        eprintln!("cargo:warning=Failed to embed Windows executable icon: {err}");
+    }
 }

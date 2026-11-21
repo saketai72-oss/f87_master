@@ -78,6 +78,9 @@ impl Registry {
             return;
         };
         for path in list_ext(Some(&dir), "klx") {
+            if std::fs::metadata(&path).map(|m| m.len() == 0).unwrap_or(false) {
+                continue;
+            }
             match CompositeEffect::load(&path) {
                 Ok(fx) => self.entries.push(Entry {
                     meta: fx.meta(),
@@ -104,6 +107,9 @@ impl Registry {
         paths.sort();
 
         for path in paths {
+            if std::fs::metadata(&path).map(|m| m.len() == 0).unwrap_or(false) {
+                continue;
+            }
             match AnimationEffect::load(&path) {
                 Ok(fx) => self.entries.push(Entry {
                     meta: fx.meta(),
