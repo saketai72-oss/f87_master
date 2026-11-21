@@ -126,7 +126,12 @@ impl App {
                 window.set_cloaked(false);
             }
         }
-        engine.send(Cmd::SetMaxFps(settings.max_fps));
+        let initial_fps = if settings.max_fps == 0 {
+            21
+        } else {
+            settings.max_fps
+        };
+        engine.send(Cmd::SetMaxFps(initial_fps));
         let (startup_enabled, startup_error) = match startup::enabled() {
             Ok(enabled) => (enabled, None),
             Err(error) => (false, Some(error)),
@@ -331,7 +336,12 @@ impl App {
                 // wireless link is paced more slowly, and offering a rate the
                 // device will silently clamp reads as a bug.
                 let ceiling = self.engine.shared.lock().unwrap().max_fps_ceiling.max(1);
-                let mut fps = self.settings.max_fps.clamp(1, ceiling);
+                let current_setting = if self.settings.max_fps == 0 {
+                    21
+                } else {
+                    self.settings.max_fps
+                };
+                let mut fps = current_setting.clamp(1, ceiling);
                 ui.horizontal(|ui| {
                     let resp = ui
                         .add(egui::Slider::new(&mut fps, 1..=ceiling).text("Frame rate"))
@@ -348,7 +358,7 @@ impl App {
                     }
                     if ui
                         .small_button("Set Default")
-                        .on_hover_text("Reset frame rate to default (21 FPS)")
+                        .on_hover_text("Reset frame rate to default: Ultra Smooth (21 FPS)")
                         .clicked()
                     {
                         fps = 21.min(ceiling);
@@ -1019,7 +1029,6 @@ impl eframe::App for App {
                 s.profile_status.clone(),
             )
         };
-        let wireless = link == Some(Link::Dongle);
         let target = match &status {
             DeviceStatus::Connected { id, .. } => Some(id.clone()),
             _ => None,
@@ -1439,7 +1448,7 @@ impl eframe::App for App {
                     )
                     .show_ui(ui, |ui| {
                         for (index, effect) in effects.iter().enumerate() {
-                            let available = !(wireless && (effect.is_animation || effect.is_composition));
+                            let available = true;
                             if ui
                                 .add_enabled(
                                     available,
@@ -1538,10 +1547,6 @@ impl eframe::App for App {
                 let (rect, _) = ui.allocate_exact_size(egui::vec2(ui.available_width(), height), egui::Sense::hover());
                 board::draw_board(ui, rect, &layout, &frame);
             });
-            if wireless {
-                ui.add_space(12.0);
-                ui.colored_label(pal.warning, "Connected wirelessly. Use USB for smooth animation playback.");
-            }
             ui.add_space(18.0);
             let mut changed = false;
             theme::surface(ui, |ui| {

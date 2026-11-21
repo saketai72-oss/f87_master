@@ -5,7 +5,9 @@
 
 use std::collections::BTreeMap;
 
-use aula_effects::registry::{Registry, Source};
+use aula_effects::registry::Registry;
+#[cfg(test)]
+use aula_effects::registry::Source;
 use aula_effects::{ParamKind, ParamSpec, Params, Value};
 use aula_protocol::Rgb;
 use serde::{Deserialize, Serialize};
@@ -185,7 +187,7 @@ pub fn resolve(
     config: &AppLighting,
     reg: &Registry,
     application: Option<&str>,
-    wireless: bool,
+    _wireless: bool,
 ) -> Option<(Selection, ProfileStatus)> {
     let matched = config
         .enabled
@@ -201,15 +203,7 @@ pub fn resolve(
     let wanted = matched
         .map(|i| &config.profiles[i].lighting)
         .unwrap_or(&config.default);
-    let usable = |preset: &LightingPreset| {
-        reg.find(&preset.effect).filter(|i| {
-            !wireless
-                || !matches!(
-                    reg.entries[*i].source,
-                    Source::Animation(_) | Source::Composition(_)
-                )
-        })
-    };
+    let usable = |preset: &LightingPreset| reg.find(&preset.effect);
     let mut status = ProfileStatus {
         application: application.map(|app| {
             if cfg!(target_os = "linux") {
@@ -516,15 +510,16 @@ mod tests {
     }
 
     #[test]
-    fn wireless_falls_back_and_wired_restores_the_animation() {
+    fn wireless_allows_animation_without_fallback() {
         let mut reg = Registry::new();
         let wave = reg.find("wave").unwrap();
         // Resolution uses the source kind; a real file/device is unnecessary.
         reg.entries[wave].source = Source::Composition("gaming.klx".into());
         let mut config = config();
         let (selection, status) = resolve(&config, &reg, Some("game.exe"), true).unwrap();
-        assert_eq!(selection.preset.effect, "bloom");
-        assert!(status.warning.unwrap().contains("wired"));
+        assert_eq!(selection.preset.effect, "wave");
+        assert_eq!(status.active.as_deref(), Some("Gaming"));
+        assert!(status.warning.is_none());
         let (selection, status) = resolve(&config, &reg, Some("game.exe"), false).unwrap();
         assert_eq!(selection.preset.effect, "wave");
         assert_eq!(status.active.as_deref(), Some("Gaming"));
@@ -535,7 +530,7 @@ mod tests {
                 .0
                 .preset
                 .effect,
-            "solid"
+            "wave"
         );
     }
 

@@ -129,9 +129,7 @@ pub struct Shared {
     /// slower than the wired one, and a slider offering a rate the device will
     /// silently clamp looks like a bug.
     pub max_fps_ceiling: u32,
-    /// Which link the connected device is on, or `None` when disconnected. The
-    /// UI uses this to restrict wireless to solid colours: the radio cannot keep
-    /// up with full-board animation, so animations are blocked over the dongle.
+    /// Which link the connected device is on, or `None` when disconnected.
     pub link: Option<Link>,
     pub last_nvram_result: Option<Result<(), String>>,
 }
@@ -708,22 +706,6 @@ fn run(
             continue;
         }
 
-        // The radio cannot stream full-board animation smoothly, so wireless is
-        // solid-colours-only for now. The UI blocks picking an animation over
-        // the dongle, but the physical side-switch can flip the link under a
-        // running animation — this is the backstop: fall back to the first
-        // non-animation effect rather than stutter.
-        if kb.link() == Link::Dongle && blocks_wireless(&reg, selected) {
-            if let Some(i) = first_wireless_safe(&reg) {
-                selected = i;
-                params = current_params(&reg, selected);
-                effect_start = Instant::now();
-                publish_selection(&shared, selected, &params);
-                ui_changed = true;
-                applied_profile = None;
-            }
-        }
-
         // Paused means paused: no rendering and no writes, so the board holds
         // its last frame and the keyboard gets the bus entirely to itself.
         // Blanking it and then streaming black would be all of the cost and
@@ -918,21 +900,10 @@ fn publish_effects(shared: &Arc<Mutex<Shared>>, reg: &Registry) {
     s.errors = reg.errors.clone();
 }
 
-/// Does the effect at `idx` stream full-board motion the radio can't keep up
-/// with? Keyframe animations and layered compositions both do, so both are
-/// blocked over the wireless link; built-ins and scripts are not.
-fn blocks_wireless(reg: &Registry, idx: usize) -> bool {
-    reg.entries
-        .get(idx)
-        .map(|e| matches!(e.source, Source::Animation(_) | Source::Composition(_)))
-        .unwrap_or(false)
-}
-
-/// The first effect safe to drive over the wireless link, for the fallback.
-fn first_wireless_safe(reg: &Registry) -> Option<usize> {
-    reg.entries
-        .iter()
-        .position(|e| !matches!(e.source, Source::Animation(_) | Source::Composition(_)))
+/// Keyframe animations and layered compositions run smoothly over 2.4G wireless.
+#[allow(dead_code)]
+pub(crate) fn blocks_wireless(_reg: &Registry, _idx: usize) -> bool {
+    false
 }
 
 fn current_params(reg: &Registry, idx: usize) -> Params {
@@ -978,5 +949,12 @@ mod tests {
         };
         drop(engine);
         assert!(finished.load(Ordering::SeqCst));
+    }
+
+    #[test]
+    fn wireless_does_not_block_effects_and_defaults_to_21_fps() {
+        let reg = Registry::new();
+        assert!(!blocks_wireless(&reg, 0));
+        assert_eq!(p::MAX_FPS, 21);
     }
 }
