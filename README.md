@@ -9,7 +9,7 @@ Open-source, high-performance per-key RGB lighting software and animation suite 
 ## ⚡ Highlights & Features
 
 - **Full ANSI 87-Key Tenkeyless (TKL) Control**: Pixel-accurate per-key RGB streaming without requiring bloated vendor software or cloud accounts.
-- **Ultra-Smooth Dual Connection (USB-C & 2.4GHz Wireless at 21-25 FPS)**: Automatic detection and seamless switching. The 2.4GHz Dongle mode is specifically optimized with Dynamic Adaptive Color Quantization and tuned radio pacing (82 chunks/s), achieving **21–25 FPS fluid streaming** and completely unlocking keyframe animations and audio visualizers over wireless.
+- **Dual Connection (Wired & 2.4G Wireless)**: Automatic detection and seamless switching. Smoothly supports all animation and audio-reactive effects over both USB-C and 2.4GHz Wireless Dongle with hardware-calibrated radio pacing, vibrant true colors, and zero glitching.
 - **Single-Instance Protection**: Enforces a system-wide named mutex (`Local\AULA_F87_RGB_CONTROLLER_MUTEX`) to ensure clean hardware access.
 - **Music Equalizer (Nháy theo nhạc)**: Dynamic 16-band audio graphic equalizer with realistic bass bounce, mid-frequency harmonics, peak hold meters, and beat pulse shockwaves.
 - **Rich Effect Library**:

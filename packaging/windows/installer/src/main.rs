@@ -259,10 +259,11 @@ fn install(install_dir: &Path, silent: bool, launch_flag: bool, no_launch: bool)
     fs::create_dir_all(&effects_dir)
         .map_err(|e| format!("Failed to create directory {}: {}", effects_dir.display(), e))?;
 
-    // Write application executable
+    // Write application executable and installation marker
     let exe_path = install_dir.join("f87.exe");
     fs::write(&exe_path, F87_EXE)
         .map_err(|e| format!("Failed to write {}: {}", exe_path.display(), e))?;
+    let _ = fs::write(install_dir.join("installed.txt"), "AULA F87 Installed\n");
 
     // Write lighting effects
     fs::write(effects_dir.join("breathe.rhai"), EFFECT_BREATHE)

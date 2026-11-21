@@ -9,7 +9,7 @@ Phần mềm mã nguồn mở điều khiển LED RGB từng phím (per-key) hi�
 ## ⚡ Tính Năng Nổi Bật
 
 - **Điều Khiển Chuẩn ANSI 87 Phím (TKL)**: Từng phím được điều khiển chính xác theo tọa độ thực tế mà không cần cài đặt phần mềm độc quyền nặng nề hay tài khoản đám mây của hãng.
-- **Kết Nối Kép Siêu Mượt (Dây USB-C & Không Dây 2.4G 21-25 FPS)**: Tự động nhận diện và chuyển đổi linh hoạt. Chế độ 2.4GHz Dongle được tối ưu hóa đặc biệt với thuật toán nén màu thích ứng động (Dynamic Adaptive Quantization) và pacing vô tuyến 82 chunks/s, đạt tốc độ **21–25 FPS mượt mà**, dỡ bỏ mọi rào cản animation và equalizer trên không dây.
+- **Kết Nối Kép Mượt Mà (Dây USB-C & Không Dây 2.4G)**: Tự động nhận diện và chuyển đổi linh hoạt. Hỗ trợ mượt mà toàn bộ các hiệu ứng animation và nháy theo nhạc qua cả USB-C và 2.4GHz USB Dongle với thuật toán điều phối luồng dữ liệu (radio pacing) chuẩn phần cứng, màu sắc trung thực và không bị chập chờn.
 - **Tự Động Chạy Ngầm Dưới Khay Hệ Thống (System Tray)**: Bấm nút đóng cửa sổ `[X]` sẽ tự động thu nhỏ ứng dụng xuống khay hệ thống, giúp hiệu ứng đèn LED tiếp tục hoạt động liên tục mà không làm vướng màn hình làm việc.
 - **Lưu Trạng Thái Đèn Vào Phần Cứng**: Khi bạn thoát ứng dụng hoàn toàn (`Quit`), hệ thống sẽ tự động lưu frame màu hiện tại vào bộ nhớ flash tĩnh của bàn phím (`kb.set_static`), giữ cho bàn phím luôn sáng đẹp thay vì bị tắt tối đen.
 - **Hiệu Ứng Nháy Theo Nhạc (Music Equalizer)**: Bộ lọc đồ họa 16 dải tần số âm thanh (16-band graphic equalizer) chân thực với độ nảy của dải bass, sóng xung kích (beat pulse) trên phím Space và hiển thị đỉnh dB (peak hold).

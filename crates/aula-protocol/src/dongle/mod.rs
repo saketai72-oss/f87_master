@@ -214,26 +214,29 @@ impl Dongle {
         self.hue_steps = steps.clamp(2.0, MAX_HUE_STEPS);
     }
 
-    /// Wait until the link can take another frame using monotonic deadline scheduling
-    /// to eliminate timestamp drift.
+    /// Wait until the link can take another frame.
+    ///
+    /// Two limits, whichever is longer. The tick is the firmware's floor, the
+    /// same rule the wired path has: writing faster than it can absorb starves
+    /// the key-scan loop, and the failure is subtle — the board lights
+    /// perfectly while dropping keypresses.
+    ///
+    /// The chunk budget is the radio's, and it is the one that usually binds.
+    /// The cost of a frame is its chunk count, so the previous frame's size
+    /// sets how long to wait before the next: an 8-chunk full-board frame earns
+    /// a 125 ms gap at 64 chunks/s, while a 2-chunk sparse one earns 31 ms and
+    /// runs at the tick instead. Exceed it and frames arrive faster than the
+    /// board can apply them, which looks like the effect fighting something
+    /// else for control of the colours.
     fn respect_rate(&mut self) {
         let wait = rate_period(self.tick, self.cache.last_chunks);
-        let now = Instant::now();
-        let next = match self.last_tick {
-            Some(prev) => {
-                let deadline = prev + wait;
-                if now < deadline {
-                    thread::sleep(deadline - now);
-                    deadline
-                } else if now.saturating_duration_since(deadline) > wait {
-                    now
-                } else {
-                    deadline
-                }
+        if let Some(prev) = self.last_tick {
+            let elapsed = prev.elapsed();
+            if elapsed < wait {
+                thread::sleep(wait - elapsed);
             }
-            None => now,
-        };
-        self.last_tick = Some(next);
+        }
+        self.last_tick = Some(Instant::now());
     }
 
     /// Send one message, split across as many frames as it needs.
@@ -334,7 +337,6 @@ impl Dongle {
 
 fn plan_frame(layout: &[KeyPos], frame: &Frame, hue_steps: f32) -> Vec<p::Group> {
     let mut by_colour: BTreeMap<(u8, u8, u8), Vec<u8>> = BTreeMap::new();
-    let mut lit_count = 0;
 
     for k in layout {
         if k.led > usize::from(u8::MAX) {
@@ -344,7 +346,6 @@ fn plan_frame(layout: &[KeyPos], frame: &Frame, hue_steps: f32) -> Vec<p::Group>
         if want == Rgb::BLACK {
             continue;
         }
-        lit_count += 1;
         by_colour
             .entry((want.r, want.g, want.b))
             .or_default()
@@ -367,6 +368,8 @@ fn plan_frame(layout: &[KeyPos], frame: &Frame, hue_steps: f32) -> Vec<p::Group>
             }];
         }
     }
+    // Largest runs first: if the frame ever does overflow the message, the
+    // most visible part of it survives.
     let mut groups: Vec<p::Group> = by_colour
         .into_iter()
         .map(|((r, g, b), leds)| p::Group {
@@ -374,80 +377,8 @@ fn plan_frame(layout: &[KeyPos], frame: &Frame, hue_steps: f32) -> Vec<p::Group>
             leds,
         })
         .collect();
-
-    // Dynamic adaptive quantization / clustering:
-    // If not sparse (>= 40 lit keys) and color groups exceed 5 chunks (70 bytes),
-    // iteratively merge nearest hue bins so frames stay <= 5 chunks (~18-20 FPS)
-    // without visible stepping to human eye.
-    // For sparse frames (< 40 lit keys, e.g. music equalizer, reactive effects),
-    // keep exact grouping (2-3 chunks, 22-25 FPS).
-    if lit_count >= 40 {
-        const MAX_BYTES: usize = 5 * p::CHUNK_PAYLOAD;
-        while groups.len() > 1 && groups.iter().map(|g| g.encoded_len()).sum::<usize>() > MAX_BYTES
-        {
-            merge_nearest_hue_bins(&mut groups, hue_steps);
-        }
-    }
-
-    // Largest runs first: if the frame ever does overflow the message, the
-    // most visible part of it survives.
     groups.sort_by_key(|g| std::cmp::Reverse(g.leds.len()));
     groups
-}
-
-fn consolidate_identical_colors(groups: &mut Vec<p::Group>) {
-    let mut i = 0;
-    while i < groups.len() {
-        let mut j = i + 1;
-        while j < groups.len() {
-            if groups[i].color == groups[j].color {
-                let j_leds = groups.remove(j).leds;
-                groups[i].leds.extend(j_leds);
-            } else {
-                j += 1;
-            }
-        }
-        i += 1;
-    }
-}
-
-fn merge_nearest_hue_bins(groups: &mut Vec<p::Group>, hue_steps: f32) {
-    if groups.len() <= 1 {
-        return;
-    }
-    let mut best_pair = (0, 1);
-    let mut min_dist = f32::MAX;
-
-    for i in 0..groups.len() {
-        let (h1, s1, v1) = groups[i].color.to_hsv();
-        for (j, group_j) in groups.iter().enumerate().skip(i + 1) {
-            let (h2, s2, v2) = group_j.color.to_hsv();
-            let raw_diff = (h1 - h2).abs();
-            let hue_dist = raw_diff.min(1.0 - raw_diff);
-            let dist = hue_dist + 0.25 * (s1 - s2).abs() + 0.25 * (v1 - v2).abs();
-            if dist < min_dist {
-                min_dist = dist;
-                best_pair = (i, j);
-            }
-        }
-    }
-
-    let (i, j) = best_pair;
-    let count_i = groups[i].leds.len();
-    let count_j = groups[j].leds.len();
-    let total = count_i + count_j;
-
-    let r = ((groups[i].color.r as usize * count_i + groups[j].color.r as usize * count_j) / total)
-        as u8;
-    let g = ((groups[i].color.g as usize * count_i + groups[j].color.g as usize * count_j) / total)
-        as u8;
-    let b = ((groups[i].color.b as usize * count_i + groups[j].color.b as usize * count_j) / total)
-        as u8;
-
-    groups[i].color = quantise_with(Rgb::new(r, g, b), hue_steps);
-    let j_leds = groups.remove(j).leds;
-    groups[i].leds.extend(j_leds);
-    consolidate_identical_colors(groups);
 }
 
 impl RgbDevice for Dongle {
@@ -564,8 +495,8 @@ mod tests {
         );
         assert_eq!(cache.last_chunks, 6);
         assert_eq!(
-            rate_period(Duration::from_millis(p::TICK_MS), cache.last_chunks),
-            Duration::from_micros(73171)
+            rate_period(Duration::from_millis(46), cache.last_chunks),
+            Duration::from_micros(93750)
         );
         cache.complete_send(Some(now), colors.clone());
         assert_eq!(cache.shown, colors);
@@ -582,8 +513,8 @@ mod tests {
         assert!(!cache.due(started + Duration::from_millis(p::KEEPALIVE_MS - 1)));
         assert!(cache.due(started + Duration::from_millis(p::KEEPALIVE_MS)));
         assert_eq!(
-            rate_period(Duration::from_millis(p::TICK_MS), 28),
-            Duration::from_micros(341464)
+            rate_period(Duration::from_millis(46), 28),
+            Duration::from_micros(437500)
         );
         assert_eq!(
             rate_period(Duration::from_secs(1), 6),
@@ -1016,63 +947,8 @@ mod tests {
             "a 2-chunk frame should be far cheaper than an 8-chunk one: \
              {sparse} ms vs {full_board} ms"
         );
-        // The measured clean rate with MAX_CHUNKS_PER_SEC = 82: 8 chunks at ~10 FPS.
-        assert_eq!(full_board, 97, "8 chunks should earn a 97 ms gap");
-    }
-
-    /// Adaptive dynamic clustering bounds payloads to <= 5 chunks (70 bytes) on dense frames.
-    #[test]
-    fn dense_frames_adaptively_cluster_to_at_most_five_chunks() {
-        let layout = keymap::layout();
-        let mut frame = Frame::black(128);
-        // 50 lit keys with 10 different hues (would originally be 10*4 + 50 = 90 bytes > 70 bytes)
-        for (i, k) in layout.iter().take(50).enumerate() {
-            let hue = (i % 10) as f32 / 10.0;
-            frame.set(k.led, Rgb::from_hsv(hue, 1.0, 1.0));
-        }
-        let groups = plan_frame(&layout, &frame, HUE_STEPS);
-        let total_bytes: usize = groups.iter().map(|g| g.encoded_len()).sum();
-        let chunks = total_bytes.div_ceil(p::CHUNK_PAYLOAD);
-        assert!(
-            chunks <= 5,
-            "dense 50-key frame must cluster to <= 5 chunks (got {chunks} chunks, {total_bytes} bytes)"
-        );
-        let lit: usize = groups.iter().map(|g| g.leds.len()).sum();
-        assert_eq!(
-            lit, 50,
-            "all 50 lit keys must be preserved in merged groups"
-        );
-    }
-
-    /// Sparse frames (< 40 lit keys) preserve exact grouping without clustering.
-    #[test]
-    fn sparse_frames_preserve_exact_grouping() {
-        let layout = keymap::layout();
-        let mut frame = Frame::black(128);
-        // 20 lit keys with 4 distinct colors (equalizer shape)
-        let colors = [
-            Rgb::new(255, 0, 0),
-            Rgb::new(0, 255, 0),
-            Rgb::new(0, 0, 255),
-            Rgb::new(255, 255, 0),
-        ];
-        for (i, k) in layout.iter().take(20).enumerate() {
-            frame.set(k.led, colors[i % 4]);
-        }
-        let groups = plan_frame(&layout, &frame, HUE_STEPS);
-        assert_eq!(
-            groups.len(),
-            4,
-            "exact 4 groups must be preserved for sparse frame"
-        );
-        let lit: usize = groups.iter().map(|g| g.leds.len()).sum();
-        assert_eq!(lit, 20, "all 20 lit keys preserved");
-        let total_bytes: usize = groups.iter().map(|g| g.encoded_len()).sum();
-        let chunks = total_bytes.div_ceil(p::CHUNK_PAYLOAD);
-        assert!(
-            chunks <= 3,
-            "20-key 4-color frame fits in 3 chunks ({total_bytes} bytes)"
-        );
+        // The measured clean rate: 8 chunks at 8 FPS.
+        assert_eq!(full_board, 125, "8 chunks should earn a 125 ms gap");
     }
 
     /// The tick is a floor the budget can never undercut.

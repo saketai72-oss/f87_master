@@ -123,12 +123,20 @@ const IDLE_LEN_BYTE: u8 = 0x23;
 /// as the hardware, and made each delta twice as large — the frames were
 /// further apart, so more keys had changed between them. Animation looked
 /// terrible for both reasons at once.
-pub const TICK_MS: u64 = 42;
+pub const TICK_MS: u64 = 46;
 
 /// Spacing between the chunks of one message.
 ///
-/// Set to 9ms (down from 13ms to save 30-40ms airtime).
-pub const PACKET_GAP_MS: u64 = 9;
+/// The vendor's measured minimum: 13.0 ms, mean 14.0 across 90 gaps. It was 6
+/// for a while, chased for frame rate, before it became clear that the link's
+/// limit is total throughput rather than intra-message spacing — see
+/// `MAX_CHUNKS_PER_SEC`, which is what actually governs the rate now.
+///
+/// Staying at the vendor's number costs nothing here and keeps this driver
+/// inside behaviour the hardware is known to tolerate. The failure mode for
+/// going faster is the key-scan starvation the wired path documents: the board
+/// lights perfectly while dropping and doubling keypresses.
+pub const PACKET_GAP_MS: u64 = 13;
 
 /// Start an unchanged frame's refresh after this interval, measured from the
 /// start of the previous successful message rather than its completion.
@@ -166,7 +174,7 @@ pub const KEEPALIVE_MS: u64 = 125;
 /// carries. A sparse effect whose frame is two chunks may run at 30 FPS on the
 /// same budget that limits an eight-chunk full-board frame to 8. Capping frames
 /// instead would punish the cheap effect for the expensive one's cost.
-pub const MAX_CHUNKS_PER_SEC: u64 = 82;
+pub const MAX_CHUNKS_PER_SEC: u64 = 64;
 
 /// Frames one STREAMED tick may send.
 ///

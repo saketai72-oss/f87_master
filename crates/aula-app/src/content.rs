@@ -1,17 +1,88 @@
 //! Installed builds keep editable content in the user's settings directory.
 use std::path::{Path, PathBuf};
 
+const EMBEDDED_EFFECTS: &[(&str, &[u8])] = &[
+    (
+        "breathe.rhai",
+        include_bytes!("../../../effects/breathe.rhai"),
+    ),
+    (
+        "ripple.rhai",
+        include_bytes!("../../../effects/ripple.rhai"),
+    ),
+    (
+        "spiral.rhai",
+        include_bytes!("../../../effects/spiral.rhai"),
+    ),
+    (
+        "aurora.rhai",
+        include_bytes!("../../../effects/aurora.rhai"),
+    ),
+    ("fire.rhai", include_bytes!("../../../effects/fire.rhai")),
+    (
+        "matrix_rain.rhai",
+        include_bytes!("../../../effects/matrix_rain.rhai"),
+    ),
+    (
+        "cyber_pulse.rhai",
+        include_bytes!("../../../effects/cyber_pulse.rhai"),
+    ),
+    (
+        "music_equalizer.rhai",
+        include_bytes!("../../../effects/music_equalizer.rhai"),
+    ),
+];
+
+const EMBEDDED_ANIMATIONS: &[(&str, &[u8])] = &[
+    (
+        "f87_cyber_wave.klx",
+        include_bytes!("../../../animations/f87_cyber_wave.klx"),
+    ),
+    (
+        "f87_gaming_zones.klx",
+        include_bytes!("../../../animations/f87_gaming_zones.klx"),
+    ),
+    (
+        "f87_rainbow_sweep.klx",
+        include_bytes!("../../../animations/f87_rainbow_sweep.klx"),
+    ),
+];
+
 pub fn installed_effects_dir() -> Option<PathBuf> {
-    let exe = std::env::current_exe().ok()?;
-    let bundled = exe.parent()?;
-    if !bundled.join("installed.txt").is_file() {
-        return None;
-    }
     let base = crate::settings::Settings::path()?.parent()?.join("content");
     let effects = base.join("effects");
-    let _ = seed_missing(&bundled.join("effects"), &effects);
-    let _ = seed_missing(&bundled.join("animations"), &base.join("animations"));
-    let _ = std::fs::create_dir_all(base.join("animations"));
+    let anims = base.join("animations");
+    let _ = std::fs::create_dir_all(&effects);
+    let _ = std::fs::create_dir_all(&anims);
+
+    // If bundled effects exist on disk alongside exe, seed from them:
+    if let Ok(exe) = std::env::current_exe() {
+        if let Some(parent) = exe.parent() {
+            let bundled_effects = parent.join("effects");
+            if bundled_effects.is_dir() {
+                let _ = seed_missing(&bundled_effects, &effects);
+            }
+            let bundled_anims = parent.join("animations");
+            if bundled_anims.is_dir() {
+                let _ = seed_missing(&bundled_anims, &anims);
+            }
+        }
+    }
+
+    // Always ensure embedded effects are present in user content dir:
+    for &(name, bytes) in EMBEDDED_EFFECTS {
+        let target = effects.join(name);
+        if !target.is_file() {
+            let _ = std::fs::write(&target, bytes);
+        }
+    }
+    for &(name, bytes) in EMBEDDED_ANIMATIONS {
+        let target = anims.join(name);
+        if !target.is_file() {
+            let _ = std::fs::write(&target, bytes);
+        }
+    }
+
     Some(effects)
 }
 
