@@ -73,6 +73,17 @@ impl WindowRef {
         }
     }
 
+    /// Hide and cloak the window. Safe to call from any thread.
+    pub fn hide(self) {
+        #[cfg(target_os = "windows")]
+        unsafe {
+            use windows_sys::Win32::UI::WindowsAndMessaging::{ShowWindow, SW_HIDE};
+            let hwnd = self.hwnd as windows_sys::Win32::Foundation::HWND;
+            self.set_cloaked(true);
+            ShowWindow(hwnd, SW_HIDE);
+        }
+    }
+
     /// Un-hide, un-minimise and raise the window. Safe to call from any thread.
     pub fn show(self) {
         #[cfg(target_os = "windows")]

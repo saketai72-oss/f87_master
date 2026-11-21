@@ -196,9 +196,37 @@ impl App {
             self.live_active = false;
         }
         ctx.send_viewport_cmd(egui::ViewportCommand::Visible(false));
+        if let Some(w) = self.window {
+            w.hide();
+        }
         self.hidden = true;
         self.confirm_close = false;
         true
+    }
+
+    /// Request the window to close according to settings (tray / ask / quit).
+    /// If currently in fullscreen, exits fullscreen mode first.
+    fn trigger_close(&mut self, ctx: &egui::Context, running: bool) {
+        let is_fullscreen = ctx.input(|i| i.viewport().fullscreen.unwrap_or(false));
+        if is_fullscreen {
+            ctx.send_viewport_cmd(egui::ViewportCommand::Fullscreen(false));
+        }
+        let action = if self.can_hide() {
+            self.settings.close_action
+        } else {
+            CloseAction::Quit
+        };
+        match action {
+            CloseAction::Quit => self.quit(ctx),
+            CloseAction::Tray => {
+                ctx.send_viewport_cmd(egui::ViewportCommand::CancelClose);
+                self.hide_to_tray(ctx, running);
+            }
+            CloseAction::Ask => {
+                ctx.send_viewport_cmd(egui::ViewportCommand::CancelClose);
+                self.confirm_close = true;
+            }
+        }
     }
 
     fn quit(&mut self, ctx: &egui::Context) {
@@ -243,23 +271,7 @@ impl App {
         }
 
         if ctx.input(|i| i.viewport().close_requested()) && !self.quitting {
-            // Without a tray, close can only mean quit.
-            let action = if self.can_hide() {
-                self.settings.close_action
-            } else {
-                CloseAction::Quit
-            };
-            match action {
-                CloseAction::Quit => self.quitting = true,
-                CloseAction::Tray => {
-                    ctx.send_viewport_cmd(egui::ViewportCommand::CancelClose);
-                    self.hide_to_tray(ctx, running);
-                }
-                CloseAction::Ask => {
-                    ctx.send_viewport_cmd(egui::ViewportCommand::CancelClose);
-                    self.confirm_close = true;
-                }
-            }
+            self.trigger_close(ctx, running);
         }
     }
 
@@ -1082,6 +1094,24 @@ impl eframe::App for App {
         if self.tab == Tab::Create && self.editor.is_none() {
             self.editor = Some(Editor::new(frame.len().max(1)));
         }
+        // Fullscreen toggle (F11) and escape
+        if ctx.input(|i| i.key_pressed(egui::Key::F11)) {
+            let is_fs = ctx.input(|i| i.viewport().fullscreen.unwrap_or(false));
+            ctx.send_viewport_cmd(egui::ViewportCommand::Fullscreen(!is_fs));
+        }
+        if ctx.input(|i| i.viewport().fullscreen.unwrap_or(false))
+            && ctx.input(|i| i.key_pressed(egui::Key::Escape))
+        {
+            ctx.send_viewport_cmd(egui::ViewportCommand::Fullscreen(false));
+        }
+        // Ctrl+W / Ctrl+Q to close window
+        let close_req = ctx.input_mut(|i| {
+            i.consume_key(egui::Modifiers::COMMAND, egui::Key::W)
+                || i.consume_key(egui::Modifiers::COMMAND, egui::Key::Q)
+        });
+        if close_req {
+            self.trigger_close(ctx, running);
+        }
         let compact_header = ctx.screen_rect().width() < 620.0;
         egui::TopBottomPanel::top("workspace-toolbar")
             .frame(
@@ -1221,6 +1251,62 @@ impl eframe::App for App {
                     }
 
                     ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        // Window controls: Close, Maximize/Restore, Minimize
+                        let close_btn = egui::Button::new(
+                            egui::RichText::new(" ✕ ")
+                                .size(13.0)
+                                .strong()
+                                .color(pal.danger),
+                        )
+                        .fill(egui::Color32::TRANSPARENT)
+                        .rounding(4.0)
+                        .min_size(egui::vec2(28.0, 26.0));
+                        if ui.add(close_btn).on_hover_text("Đóng (Close · Ctrl+W)").clicked() {
+                            self.trigger_close(ctx, running);
+                        }
+
+                        let is_fullscreen = ctx.input(|i| i.viewport().fullscreen.unwrap_or(false));
+                        let is_maximized = ctx.input(|i| i.viewport().maximized.unwrap_or(false));
+                        let max_icon = if is_fullscreen || is_maximized { " 🗗 " } else { " 🗖 " };
+                        let max_tip = if is_fullscreen {
+                            "Thoát toàn màn hình (Exit Fullscreen · F11 / Esc)"
+                        } else if is_maximized {
+                            "Khôi phục kích thước (Restore)"
+                        } else {
+                            "Phóng to toàn màn hình (Maximize / Fullscreen · F11)"
+                        };
+                        let max_btn = egui::Button::new(
+                            egui::RichText::new(max_icon)
+                                .size(12.0)
+                                .color(pal.text_muted),
+                        )
+                        .fill(egui::Color32::TRANSPARENT)
+                        .rounding(4.0)
+                        .min_size(egui::vec2(28.0, 26.0));
+                        if ui.add(max_btn).on_hover_text(max_tip).clicked() {
+                            if is_fullscreen {
+                                ctx.send_viewport_cmd(egui::ViewportCommand::Fullscreen(false));
+                            } else {
+                                ctx.send_viewport_cmd(egui::ViewportCommand::Maximized(!is_maximized));
+                            }
+                        }
+
+                        let min_btn = egui::Button::new(
+                            egui::RichText::new(" 🗕 ")
+                                .size(12.0)
+                                .color(pal.text_muted),
+                        )
+                        .fill(egui::Color32::TRANSPARENT)
+                        .rounding(4.0)
+                        .min_size(egui::vec2(28.0, 26.0));
+                        if ui.add(min_btn).on_hover_text("Thu nhỏ (Minimize)").clicked() {
+                            ctx.send_viewport_cmd(egui::ViewportCommand::Minimized(true));
+                        }
+
+                        ui.add_space(6.0);
+                        ui.separator();
+                        ui.add_space(6.0);
+
                         if ui
                             .add(theme::primary_button(if compact_header {
                                 if running {
