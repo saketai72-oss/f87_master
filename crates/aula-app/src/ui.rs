@@ -1012,7 +1012,9 @@ fn open_folder(path: &std::path::Path) {
 
 impl App {
     fn handle_capture(&mut self, ctx: &egui::Context) {
-        let Some(dir) = self.capture_dir.clone() else { return; };
+        let Some(dir) = self.capture_dir.clone() else {
+            return;
+        };
 
         let mut got_screenshot = false;
         for event in &ctx.input(|i| i.raw.events.clone()) {
@@ -1043,12 +1045,10 @@ impl App {
                 self.capture_step = 2;
                 ctx.request_repaint();
             }
-            2 => {
-                if got_screenshot {
-                    self.tab = Tab::Create;
-                    self.capture_step = 3;
-                    ctx.request_repaint();
-                }
+            2 if got_screenshot => {
+                self.tab = Tab::Create;
+                self.capture_step = 3;
+                ctx.request_repaint();
             }
             3 => {
                 self.capture_pending_name = Some("frame_2_studio.png".to_string());
@@ -1056,12 +1056,10 @@ impl App {
                 self.capture_step = 4;
                 ctx.request_repaint();
             }
-            4 => {
-                if got_screenshot {
-                    self.tab = Tab::Apps;
-                    self.capture_step = 5;
-                    ctx.request_repaint();
-                }
+            4 if got_screenshot => {
+                self.tab = Tab::Apps;
+                self.capture_step = 5;
+                ctx.request_repaint();
             }
             5 => {
                 self.capture_pending_name = Some("frame_3_profiles.png".to_string());
@@ -1069,12 +1067,10 @@ impl App {
                 self.capture_step = 6;
                 ctx.request_repaint();
             }
-            6 => {
-                if got_screenshot {
-                    self.tab = Tab::Settings;
-                    self.capture_step = 7;
-                    ctx.request_repaint();
-                }
+            6 if got_screenshot => {
+                self.tab = Tab::Settings;
+                self.capture_step = 7;
+                ctx.request_repaint();
             }
             7 => {
                 self.capture_pending_name = Some("frame_4_settings.png".to_string());
@@ -1082,13 +1078,11 @@ impl App {
                 self.capture_step = 8;
                 ctx.request_repaint();
             }
-            8 => {
-                if got_screenshot {
-                    self.tab = Tab::Play;
-                    ctx.send_viewport_cmd(egui::ViewportCommand::Fullscreen(true));
-                    self.capture_step = 9;
-                    ctx.request_repaint();
-                }
+            8 if got_screenshot => {
+                self.tab = Tab::Play;
+                ctx.send_viewport_cmd(egui::ViewportCommand::Fullscreen(true));
+                self.capture_step = 9;
+                ctx.request_repaint();
             }
             9 => {
                 self.capture_step = 10;
@@ -1100,14 +1094,12 @@ impl App {
                 self.capture_step = 11;
                 ctx.request_repaint();
             }
-            11 => {
-                if got_screenshot {
-                    ctx.send_viewport_cmd(egui::ViewportCommand::Fullscreen(false));
-                    let _ = std::fs::write(dir.join("done.txt"), "ok");
-                    self.quitting = true;
-                    ctx.send_viewport_cmd(egui::ViewportCommand::Close);
-                    self.capture_step = 12;
-                }
+            11 if got_screenshot => {
+                ctx.send_viewport_cmd(egui::ViewportCommand::Fullscreen(false));
+                let _ = std::fs::write(dir.join("done.txt"), "ok");
+                self.quitting = true;
+                ctx.send_viewport_cmd(egui::ViewportCommand::Close);
+                self.capture_step = 12;
             }
             _ => {}
         }
@@ -1372,13 +1364,21 @@ impl eframe::App for App {
                         .fill(egui::Color32::TRANSPARENT)
                         .rounding(4.0)
                         .min_size(egui::vec2(28.0, 26.0));
-                        if ui.add(close_btn).on_hover_text("Đóng (Close · Ctrl+W)").clicked() {
+                        if ui
+                            .add(close_btn)
+                            .on_hover_text("Đóng (Close · Ctrl+W)")
+                            .clicked()
+                        {
                             self.trigger_close(ctx, running);
                         }
 
                         let is_fullscreen = ctx.input(|i| i.viewport().fullscreen.unwrap_or(false));
                         let is_maximized = ctx.input(|i| i.viewport().maximized.unwrap_or(false));
-                        let max_icon = if is_fullscreen || is_maximized { " ▣ " } else { " □ " };
+                        let max_icon = if is_fullscreen || is_maximized {
+                            " ▣ "
+                        } else {
+                            " □ "
+                        };
                         let max_tip = if is_fullscreen {
                             "Thoát toàn màn hình (Exit Fullscreen · F11 / Esc)"
                         } else if is_maximized {
@@ -1398,7 +1398,9 @@ impl eframe::App for App {
                             if is_fullscreen {
                                 ctx.send_viewport_cmd(egui::ViewportCommand::Fullscreen(false));
                             } else {
-                                ctx.send_viewport_cmd(egui::ViewportCommand::Maximized(!is_maximized));
+                                ctx.send_viewport_cmd(egui::ViewportCommand::Maximized(
+                                    !is_maximized,
+                                ));
                             }
                         }
 
@@ -1411,7 +1413,11 @@ impl eframe::App for App {
                         .fill(egui::Color32::TRANSPARENT)
                         .rounding(4.0)
                         .min_size(egui::vec2(28.0, 26.0));
-                        if ui.add(min_btn).on_hover_text("Thu nhỏ (Minimize)").clicked() {
+                        if ui
+                            .add(min_btn)
+                            .on_hover_text("Thu nhỏ (Minimize)")
+                            .clicked()
+                        {
                             ctx.send_viewport_cmd(egui::ViewportCommand::Minimized(true));
                         }
 

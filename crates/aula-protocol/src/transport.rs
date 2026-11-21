@@ -327,7 +327,9 @@ fn targets(all: &[&DeviceInfo], spec: &ScanSpec<'_>) -> Vec<(DeviceId, Link, Con
 
     for d in all {
         let id = id_of(d);
-        if crate::compatibility::unsupported_reason(id).is_some() || crate::dongle::KNOWN.contains(&id) {
+        if crate::compatibility::unsupported_reason(id).is_some()
+            || crate::dongle::KNOWN.contains(&id)
+        {
             continue;
         }
         if let Some((_, link)) = spec.known.iter().find(|(k, _)| *k == id) {
@@ -349,7 +351,9 @@ fn targets(all: &[&DeviceInfo], spec: &ScanSpec<'_>) -> Vec<(DeviceId, Link, Con
     if spec.opts.deep {
         for d in all {
             let id = id_of(d);
-            if crate::compatibility::unsupported_reason(id).is_some() || crate::dongle::KNOWN.contains(&id) {
+            if crate::compatibility::unsupported_reason(id).is_some()
+                || crate::dongle::KNOWN.contains(&id)
+            {
                 continue;
             }
             if found.contains_key(&(id.vid, id.pid)) {
