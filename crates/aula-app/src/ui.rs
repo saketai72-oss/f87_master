@@ -1354,76 +1354,44 @@ impl eframe::App for App {
                     }
 
                     ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                        // Window controls: Close, Maximize/Restore, Minimize
-                        let close_btn = egui::Button::new(
-                            egui::RichText::new(" × ")
-                                .size(16.0)
-                                .strong()
-                                .color(pal.danger),
-                        )
-                        .fill(egui::Color32::TRANSPARENT)
-                        .rounding(4.0)
-                        .min_size(egui::vec2(28.0, 26.0));
-                        if ui
-                            .add(close_btn)
-                            .on_hover_text("Đóng (Close · Ctrl+W)")
-                            .clicked()
-                        {
-                            self.trigger_close(ctx, running);
-                        }
-
                         let is_fullscreen = ctx.input(|i| i.viewport().fullscreen.unwrap_or(false));
-                        let is_maximized = ctx.input(|i| i.viewport().maximized.unwrap_or(false));
-                        let max_icon = if is_fullscreen || is_maximized {
-                            " ▣ "
-                        } else {
-                            " □ "
-                        };
-                        let max_tip = if is_fullscreen {
-                            "Thoát toàn màn hình (Exit Fullscreen · F11 / Esc)"
-                        } else if is_maximized {
-                            "Khôi phục kích thước (Restore)"
-                        } else {
-                            "Phóng to toàn màn hình (Maximize / Fullscreen · F11)"
-                        };
-                        let max_btn = egui::Button::new(
-                            egui::RichText::new(max_icon)
-                                .size(13.0)
-                                .color(pal.text_muted),
-                        )
-                        .fill(egui::Color32::TRANSPARENT)
-                        .rounding(4.0)
-                        .min_size(egui::vec2(28.0, 26.0));
-                        if ui.add(max_btn).on_hover_text(max_tip).clicked() {
-                            if is_fullscreen {
-                                ctx.send_viewport_cmd(egui::ViewportCommand::Fullscreen(false));
-                            } else {
-                                ctx.send_viewport_cmd(egui::ViewportCommand::Maximized(
-                                    !is_maximized,
-                                ));
+                        if is_fullscreen {
+                            // Window controls: only shown in fullscreen where OS titlebar is hidden
+                            let close_btn = egui::Button::new(
+                                egui::RichText::new(" × ")
+                                    .size(16.0)
+                                    .strong()
+                                    .color(pal.danger),
+                            )
+                            .fill(egui::Color32::TRANSPARENT)
+                            .rounding(4.0)
+                            .min_size(egui::vec2(28.0, 26.0));
+                            if ui
+                                .add(close_btn)
+                                .on_hover_text("Đóng (Close · Esc / Ctrl+W)")
+                                .clicked()
+                            {
+                                self.trigger_close(ctx, running);
                             }
-                        }
 
-                        let min_btn = egui::Button::new(
-                            egui::RichText::new(" - ")
-                                .size(16.0)
-                                .strong()
-                                .color(pal.text_muted),
-                        )
-                        .fill(egui::Color32::TRANSPARENT)
-                        .rounding(4.0)
-                        .min_size(egui::vec2(28.0, 26.0));
-                        if ui
-                            .add(min_btn)
-                            .on_hover_text("Thu nhỏ (Minimize)")
-                            .clicked()
-                        {
-                            ctx.send_viewport_cmd(egui::ViewportCommand::Minimized(true));
-                        }
+                            let restore_btn = egui::Button::new(
+                                egui::RichText::new(" ▣ ").size(13.0).color(pal.text_muted),
+                            )
+                            .fill(egui::Color32::TRANSPARENT)
+                            .rounding(4.0)
+                            .min_size(egui::vec2(28.0, 26.0));
+                            if ui
+                                .add(restore_btn)
+                                .on_hover_text("Thoát toàn màn hình (Exit Fullscreen · F11 / Esc)")
+                                .clicked()
+                            {
+                                ctx.send_viewport_cmd(egui::ViewportCommand::Fullscreen(false));
+                            }
 
-                        ui.add_space(6.0);
-                        ui.separator();
-                        ui.add_space(6.0);
+                            ui.add_space(6.0);
+                            ui.separator();
+                            ui.add_space(6.0);
+                        }
 
                         if ui
                             .add(theme::primary_button(if compact_header {
